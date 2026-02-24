@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Upload } from 'lucide-react'
+import { Upload, Download } from 'lucide-react'
 
 const IMAGE_WIDTH = 1920
 const IMAGE_HEIGHT = 1080
@@ -165,6 +165,42 @@ export default function ImageLineTracker() {
     }
   }
 
+  const handleCoordinateChange = (point: 'A' | 'B', axis: 0 | 1, value: string) => {
+    // allow empty to result in 0
+    const numValue = parseInt(value, 10) || 0
+    const clampedValue = Math.max(0, Math.min(axis === 0 ? IMAGE_WIDTH : IMAGE_HEIGHT, numValue))
+
+    if (point === 'A') {
+      const newPointA = [...pointA] as [number, number]
+      newPointA[axis] = clampedValue
+      setPointA(newPointA)
+      setFinalCoordinates({ A: newPointA, B: pointB })
+      localStorage.setItem('lineTrackerPointA', JSON.stringify(newPointA))
+    } else {
+      const newPointB = [...pointB] as [number, number]
+      newPointB[axis] = clampedValue
+      setPointB(newPointB)
+      setFinalCoordinates({ A: pointA, B: newPointB })
+      localStorage.setItem('lineTrackerPointB', JSON.stringify(newPointB))
+    }
+  }
+
+  const handleExportJson = () => {
+    const data = {
+      pointA: { x: pointA[0], y: pointA[1] },
+      pointB: { x: pointB[0], y: pointB[1] }
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'coordinates.json'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-6">
       {/* Upload/Clear Section */}
@@ -235,9 +271,25 @@ export default function ImageLineTracker() {
                 <div className="w-3 h-3 rounded-full bg-red-500" />
                 Point A
               </h3>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-red-400">X: {pointA[0]}</div>
-                <div className="text-2xl font-bold text-red-400">Y: {pointA[1]}</div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <label className="text-red-400 font-bold text-xl w-6">X:</label>
+                  <input
+                    type="number"
+                    value={pointA[0]}
+                    onChange={(e) => handleCoordinateChange('A', 0, e.target.value)}
+                    className="bg-slate-900 text-white rounded px-3 py-1 w-24 border border-red-700/50 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-red-400 font-bold text-xl w-6">Y:</label>
+                  <input
+                    type="number"
+                    value={pointA[1]}
+                    onChange={(e) => handleCoordinateChange('A', 1, e.target.value)}
+                    className="bg-slate-900 text-white rounded px-3 py-1 w-24 border border-red-700/50 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
                 {finalCoordinates && (
                   <div className="text-green-400 text-xs font-medium">✓ Final coordinates locked</div>
                 )}
@@ -250,9 +302,25 @@ export default function ImageLineTracker() {
                 <div className="w-3 h-3 rounded-full bg-green-500" />
                 Point B
               </h3>
-              <div className="space-y-2">
-                <div className="text-2xl font-bold text-green-400">X: {pointB[0]}</div>
-                <div className="text-2xl font-bold text-green-400">Y: {pointB[1]}</div>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <label className="text-green-400 font-bold text-xl w-6">X:</label>
+                  <input
+                    type="number"
+                    value={pointB[0]}
+                    onChange={(e) => handleCoordinateChange('B', 0, e.target.value)}
+                    className="bg-slate-900 text-white rounded px-3 py-1 w-24 border border-green-700/50 focus:border-green-500 focus:outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-green-400 font-bold text-xl w-6">Y:</label>
+                  <input
+                    type="number"
+                    value={pointB[1]}
+                    onChange={(e) => handleCoordinateChange('B', 1, e.target.value)}
+                    className="bg-slate-900 text-white rounded px-3 py-1 w-24 border border-green-700/50 focus:border-green-500 focus:outline-none"
+                  />
+                </div>
                 {finalCoordinates && (
                   <div className="text-green-400 text-xs font-medium">✓ Final coordinates locked</div>
                 )}
@@ -261,25 +329,32 @@ export default function ImageLineTracker() {
           </div>
 
           {/* Final Coordinates Display */}
-          {finalCoordinates && (
-            <div className="bg-gradient-to-r from-green-900 to-emerald-900 rounded-lg p-6 border border-green-700">
-              <h3 className="text-white font-bold mb-4">✓ Final Coordinates</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-800 rounded p-3 border border-green-600">
-                  <div className="text-green-400 text-sm font-medium mb-1">Point A (Top)</div>
-                  <div className="text-white font-mono text-lg">
-                    X: {finalCoordinates.A[0]}, Y: {finalCoordinates.A[1]}
-                  </div>
+          <div className="bg-gradient-to-r from-green-900 to-emerald-900 rounded-lg p-6 border border-green-700">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white font-bold">✓ Final Coordinates</h3>
+              <button
+                onClick={handleExportJson}
+                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Save JSON
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-800 rounded p-3 border border-green-600">
+                <div className="text-green-400 text-sm font-medium mb-1">Point A (Top)</div>
+                <div className="text-white font-mono text-lg">
+                  X: {finalCoordinates ? finalCoordinates.A[0] : pointA[0]}, Y: {finalCoordinates ? finalCoordinates.A[1] : pointA[1]}
                 </div>
-                <div className="bg-slate-800 rounded p-3 border border-green-600">
-                  <div className="text-green-400 text-sm font-medium mb-1">Point B (Bottom)</div>
-                  <div className="text-white font-mono text-lg">
-                    X: {finalCoordinates.B[0]}, Y: {finalCoordinates.B[1]}
-                  </div>
+              </div>
+              <div className="bg-slate-800 rounded p-3 border border-green-600">
+                <div className="text-green-400 text-sm font-medium mb-1">Point B (Bottom)</div>
+                <div className="text-white font-mono text-lg">
+                  X: {finalCoordinates ? finalCoordinates.B[0] : pointB[0]}, Y: {finalCoordinates ? finalCoordinates.B[1] : pointB[1]}
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Instructions */}
           <div className="bg-blue-900 bg-opacity-30 rounded-lg p-4 border border-blue-700">
