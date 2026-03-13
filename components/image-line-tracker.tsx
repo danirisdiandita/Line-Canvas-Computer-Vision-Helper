@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Upload, Download } from 'lucide-react'
+import { Upload, Download, ClipboardCopy, Check } from 'lucide-react'
 
 const IMAGE_WIDTH = 1920
 const IMAGE_HEIGHT = 1080
@@ -14,6 +14,7 @@ export default function ImageLineTracker() {
   const [pointB, setPointB] = useState<[number, number]>([1920, 540])
   const [isDragging, setIsDragging] = useState<'A' | 'B' | null>(null)
   const [finalCoordinates, setFinalCoordinates] = useState<{ A: [number, number]; B: [number, number] } | null>(null)
+  const [copied, setCopied] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -200,6 +201,17 @@ export default function ImageLineTracker() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
+  
+  const handleCopyToClipboard = () => {
+    const coordA = finalCoordinates ? finalCoordinates.A : pointA
+    const coordB = finalCoordinates ? finalCoordinates.B : pointB
+    const text = `${coordA[0]} ${coordA[1]} ${coordB[0]} ${coordB[1]}`
+    
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -332,13 +344,22 @@ export default function ImageLineTracker() {
           <div className="bg-gradient-to-r from-green-900 to-emerald-900 rounded-lg p-6 border border-green-700">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-white font-bold">✓ Final Coordinates</h3>
-              <button
-                onClick={handleExportJson}
-                className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Save JSON
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleCopyToClipboard}
+                  className={`${copied ? 'bg-green-600' : 'bg-slate-600 hover:bg-slate-500'} text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2`}
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <ClipboardCopy className="w-4 h-4" />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+                <button
+                  onClick={handleExportJson}
+                  className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Save JSON
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-slate-800 rounded p-3 border border-green-600">
